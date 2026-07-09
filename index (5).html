@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExpenseWise — Track your spending</title>
+<style>
+  :root{
+    --cream:#f7f2e7;
+    --blush:#e8dcc4;
+    --peach:#c9a86a;
+    --mint:#8a9a7e;
+    --lilac:#d8c7a0;
+    --ink:#2b2420;
+    --ink-soft:#6b5f50;
+    --berry:#7a2e2e;
+    --berry-dark:#5c1f1f;
+    --line:#ddd0b4;
+    --white:#fffdf8;
+    --good:#3f6b3f;
+    --warn:#9c7a2e;
+    --bad:#8c2f2f;
+    --gold:#a8843f;
+    --radius:8px;
+    --shadow: 0 10px 28px rgba(43,36,32,0.14);
+    --modal-overlay: rgba(43,36,32,0.45);
+    font-family: 'Georgia', 'Times New Roman', serif;
+  }
+  [data-theme="dark"]{
+    --cream:#1c1814;
+    --blush:#2a241d;
+    --peach:#b88e52;
+    --mint:#6f8a6a;
+    --lilac:#a8946e;
+    --ink:#ede4d6;
+    --ink-soft:#b6a98f;
+    --berry:#c2705f;
+    --berry-dark:#e0917f;
+    --line:#3c3429;
+    --white:#262019;
+    --good:#7fbf8a;
+    --warn:#d9b35c;
+    --bad:#e08484;
+    --gold:#c7a45f;
+    --shadow: 0 10px 28px rgba(0,0,0,0.45);
+    --modal-overlay: rgba(0,0,0,0.65);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;min-height:100vh;}
+  body{
+    background:
+      linear-gradient(180deg, rgba(43,36,32,0.02) 0%, transparent 200px),
+      repeating-linear-gradient(0deg, rgba(43,36,32,0.025) 0px, rgba(43,36,32,0.025) 1px, transparent 1px, transparent 38px),
+      var(--cream);
+    color:var(--ink);
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+    transition: background-color .35s ease, color .35s ease;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    border: 14px solid transparent;
+    border-image: linear-gradient(135deg, var(--gold), var(--cream) 30%, var(--cream) 70%, var(--gold)) 1;
+    opacity:0.5;
+    transition: border-image .35s ease;
+  }
+  .blobs{display:none;}
+
+  .wrap{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:28px 20px 60px;}
+
+  *, *::before, *::after{ transition: background-color .25s ease, border-color .25s ease, color .25s ease, box-shadow .25s ease; }
+
+  /* ---------- AUTH SCREEN ---------- */
+  #authScreen{
+    min-height:88vh; display:flex; align-items:center; justify-content:center;
+  }
+  .auth-card{
+    background:rgba(255,255,255,0.85);
+    backdrop-filter: blur(6px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    width:100%; max-width:420px;
+    padding:34px 32px 28px;
+    position:relative;
+  }
+  [data-theme="dark"] .auth-card{ background:rgba(38,32,25,0.88); }
+  .mascot{
+    width:64px; height:64px; margin:0 auto 8px; display:block;
+  }
+  .brand{
+    text-align:center; font-size:1.6rem; font-weight:700; color:var(--berry-dark);
+    letter-spacing:0.3px; margin:2px 0 2px;
+  }
+  .tagline{ text-align:center; color:var(--ink-soft); font-size:0.85rem; margin-bottom:20px;}
+  .tabs{ display:flex; background:var(--blush); border-radius:4px; padding:4px; margin-bottom:22px;}
+  .tab-btn{
+    flex:1; border:none; background:transparent; padding:9px 0; border-radius:4px;
+    font-weight:700; color:var(--berry-dark); cursor:pointer; font-size:0.92rem;
+    transition:all .25s ease; font-family:inherit;
+  }
+  .tab-btn.active{ background:var(--white); box-shadow:0 4px 10px rgba(199,108,150,0.25); color:var(--berry);}
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:0.8rem; font-weight:700; color:var(--ink-soft); margin-bottom:5px;}
+  .field input{
+    width:100%; padding:11px 14px; border-radius:6px; border:2px solid var(--line);
+    background:var(--white); font-size:0.95rem; font-family:inherit; color:var(--ink);
+    outline:none; transition:border-color .2s ease;
+  }
+  .field input:focus{ border-color:var(--berry); }
+  .pw-wrap{ position:relative; }
+  .pw-toggle{
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    background:none; border:none; cursor:pointer; font-size:0.78rem; color:var(--berry-dark); font-weight:700;
+    font-family:inherit;
+  }
+  .strength-row{ display:flex; align-items:center; gap:8px; margin-top:7px; min-height:18px;}
+  .strength-bar{ flex:1; height:6px; border-radius:6px; background:var(--line); overflow:hidden;}
+  .strength-fill{ height:100%; width:0%; border-radius:6px; transition:width .25s ease, background .25s ease;}
+  .strength-label{ font-size:0.74rem; font-weight:700; min-width:54px; text-align:right;}
+  .pw-rules{ list-style:none; padding:0; margin:8px 0 0; display:grid; grid-template-columns:1fr 1fr; gap:4px;}
+  .pw-rules li{ font-size:0.71rem; color:var(--ink-soft); display:flex; align-items:center; gap:5px;}
+  .pw-rules li::before{ content:"○"; font-size:0.65rem; color:var(--line); }
+  .pw-rules li.ok{ color:var(--good); font-weight:700;}
+  .pw-rules li.ok::before{ content:"●"; color:var(--good);}
+  .error-msg{ color:var(--bad); font-size:0.78rem; margin:-4px 0 12px; font-weight:600; min-height:16px;}
+  .success-msg{ color:var(--good); font-size:0.78rem; margin:-4px 0 12px; font-weight:600; min-height:16px;}
+  .submit-btn{
+    width:100%; padding:13px; border:none; border-radius:6px; background:var(--berry);
+    color:#fff; font-weight:700; font-size:0.98rem; cursor:pointer; font-family:inherit;
+    box-shadow:0 8px 18px rgba(231,90,142,0.35); transition:transform .15s ease, background .2s ease;
+    margin-top:4px;
+  }
+  .submit-btn:hover{ background:var(--berry-dark); transform:translateY(-1px); }
+  .submit-btn:disabled{ background:#e6c6d3; cursor:not-allowed; box-shadow:none; transform:none;}
+  .auth-foot{ text-align:center; font-size:0.78rem; color:var(--ink-soft); margin-top:14px;}
+  .auth-foot a{ color:var(--berry-dark); font-weight:700; text-decoration:none; cursor:pointer;}
+  .toast{
+    position:fixed; top:18px; left:50%; transform:translateX(-50%) translateY(-16px);
+    background:var(--ink); color:var(--cream); padding:10px 18px; border-radius:5px; font-size:0.85rem;
+    font-weight:600; opacity:0; pointer-events:none; transition:all .3s ease; z-index:200; box-shadow:0 8px 20px rgba(0,0,0,0.2);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.error{ background:var(--bad); color:#fff; }
+  .toast.success{ background:var(--good); color:#fff; }
+
+  /* ---------- APP SCREEN ---------- */
+  #appScreen{ display:none; }
+  header.topbar{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px;
+  }
+  .who{ display:flex; align-items:center; gap:10px; cursor:pointer;}
+  .avatar{
+    width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--berry),var(--peach));
+    color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.05rem;
+    overflow:hidden; flex-shrink:0;
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+  .who-name{ font-weight:700; color:var(--ink); font-size:1rem; }
+  .who-sub{ font-size:0.75rem; color:var(--ink-soft); }
+  .topbar-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .nav-tabs{ display:flex; gap:6px; background:var(--blush); border-radius:8px; padding:4px; }
+  .nav-tab-btn{
+    border:none; background:transparent; padding:8px 14px; border-radius:6px; font-family:inherit;
+    font-weight:700; font-size:0.82rem; color:var(--berry-dark); cursor:pointer; transition:all .2s ease;
+  }
+  .nav-tab-btn.active{ background:var(--white); box-shadow:0 3px 8px rgba(0,0,0,0.12); color:var(--berry);}
+  .theme-toggle{
+    border:2px solid var(--line); background:var(--white); width:38px; height:38px; border-radius:50%;
+    cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center;
+  }
+  .logout-btn{
+    border:2px solid var(--berry); background:transparent; color:var(--berry-dark); font-weight:700;
+    padding:9px 18px; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.85rem;
+    transition:all .2s ease;
+  }
+  .logout-btn:hover{ background:var(--berry); color:#fff; }
+
+  .summary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:22px;}
+  .sum-card{
+    background:var(--white); border-radius:8px; padding:18px 20px; box-shadow:var(--shadow);
+    border:1px solid var(--line);
+  }
+  .sum-card .label{ font-size:0.74rem; color:var(--ink-soft); font-weight:700; text-transform:uppercase; letter-spacing:0.4px;}
+  .sum-card .value{ font-size:1.5rem; font-weight:700; margin-top:4px;}
+  .sum-card.income .value{ color:var(--good);}
+  .sum-card.expense .value{ color:var(--bad);}
+  .sum-card.balance .value{ color:var(--berry-dark);}
+
+  .panels{ display:grid; grid-template-columns: 1.1fr 1.4fr; gap:18px; align-items:start;}
+  @media (max-width: 860px){ .panels{ grid-template-columns:1fr; } .summary-grid{grid-template-columns:1fr 1fr 1fr;} }
+  @media (max-width: 560px){ .summary-grid{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--white); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow);
+    border:1px solid var(--line); margin-bottom:18px;
+  }
+  .card h2{ margin:0 0 16px; font-size:1.05rem; color:var(--berry-dark); display:flex; align-items:center; gap:8px;}
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field-sm label{ display:block; font-size:0.74rem; font-weight:700; color:var(--ink-soft); margin-bottom:4px;}
+  .field-sm input, .field-sm select{
+    width:100%; padding:9px 11px; border-radius:5px; border:2px solid var(--line);
+    font-family:inherit; font-size:0.88rem; outline:none; background:var(--cream); color:var(--ink);
+  }
+  .field-sm input:focus, .field-sm select:focus{ border-color:var(--berry); }
+  .type-toggle{ display:flex; gap:8px; margin-bottom:12px;}
+  .type-toggle button{
+    flex:1; padding:9px 0; border-radius:5px; border:2px solid var(--line); background:var(--cream);
+    font-weight:700; font-size:0.85rem; cursor:pointer; font-family:inherit; color:var(--ink-soft); transition:all .2s ease;
+  }
+  .type-toggle button.active.exp{ background:var(--bad); border-color:var(--bad); color:#fff;}
+  .type-toggle button.active.inc{ background:var(--good); border-color:var(--good); color:#fff;}
+  .add-btn{
+    width:100%; margin-top:14px; padding:11px; border:none; border-radius:6px;
+    background:var(--berry); color:#fff; font-weight:700; cursor:pointer; font-family:inherit;
+    box-shadow:0 6px 14px rgba(231,90,142,0.3);
+  }
+  .add-btn:hover{ background:var(--berry-dark); }
+  .cancel-edit-btn{
+    width:100%; margin-top:8px; padding:9px; border:2px solid var(--line); border-radius:6px;
+    background:transparent; color:var(--ink-soft); font-weight:700; cursor:pointer; font-family:inherit; font-size:0.85rem;
+  }
+  .cancel-edit-btn:hover{ border-color:var(--ink-soft); color:var(--ink); }
+  .form-error{ color:var(--bad); font-size:0.76rem; font-weight:600; min-height:14px; margin-top:6px;}
+  .editing-banner{
+    background:var(--blush); color:var(--berry-dark); font-size:0.78rem; font-weight:700;
+    padding:8px 12px; border-radius:6px; margin-bottom:12px; display:none;
+  }
+  .editing-banner.show{ display:block; }
+
+  .tx-filterbar{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
+  .tx-filterbar select, .tx-filterbar input{
+    padding:8px 10px; border-radius:5px; border:2px solid var(--line); font-family:inherit; font-size:0.8rem; background:var(--cream); color:var(--ink);
+  }
+  .search-bar{ position:relative; margin-bottom:10px; }
+  .search-bar input{
+    width:100%; padding:10px 14px 10px 34px; border-radius:6px; border:2px solid var(--line);
+    font-family:inherit; font-size:0.86rem; background:var(--cream); color:var(--ink); outline:none;
+  }
+  .search-bar input:focus{ border-color:var(--berry); }
+  .search-bar .search-icon{ position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:0.9rem; pointer-events:none;}
+  .date-filter-row{ display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center;}
+  .date-filter-row select{ padding:8px 10px; border-radius:5px; border:2px solid var(--line); font-family:inherit; font-size:0.8rem; background:var(--cream); color:var(--ink);}
+  .custom-range{ display:none; gap:8px; flex-wrap:wrap; align-items:center;}
+  .custom-range.show{ display:flex; }
+  .custom-range input{ padding:8px 10px; border-radius:5px; border:2px solid var(--line); font-family:inherit; font-size:0.8rem; background:var(--cream); color:var(--ink);}
+
+  .tx-list{ max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px;}
+  .tx-item{
+    display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:6px; background:var(--cream);
+    border:1px solid var(--line);
+  }
+  .tx-cat-pill{
+    width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:1.1rem; flex-shrink:0; color:#fff;
+  }
+  .tx-info{ flex:1; min-width:0;}
+  .tx-info .tx-cat{ font-weight:700; font-size:0.88rem; color:var(--ink);}
+  .tx-info .tx-note{ font-size:0.74rem; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .tx-meta{ text-align:right; }
+  .tx-amt{ font-weight:700; font-size:0.92rem;}
+  .tx-amt.inc{ color:var(--good);}
+  .tx-amt.exp{ color:var(--bad);}
+  .tx-date{ font-size:0.7rem; color:var(--ink-soft);}
+  .tx-actions{ display:flex; flex-direction:column; gap:2px; }
+  .tx-edit, .tx-del{
+    background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:0.92rem; padding:4px;
+    border-radius:8px; transition:all .15s ease;
+  }
+  .tx-edit:hover{ color:var(--berry); background:var(--blush);}
+  .tx-del:hover{ color:var(--bad); background:#ffe2e2;}
+  [data-theme="dark"] .tx-del:hover{ background:#4a2424; }
+  .empty-state{ text-align:center; padding:30px 10px; color:var(--ink-soft); }
+  .empty-state .em-icon{ font-size:2.2rem; display:block; margin-bottom:8px;}
+
+  .cat-breakdown{ display:flex; flex-direction:column; gap:10px; margin-top:6px;}
+  .cat-row{ display:flex; align-items:center; gap:10px;}
+  .cat-row .cname{ width:90px; font-size:0.78rem; font-weight:700; color:var(--ink); flex-shrink:0;}
+  .cat-bar-bg{ flex:1; height:10px; border-radius:8px; background:var(--line); overflow:hidden;}
+  .cat-bar-fill{ height:100%; border-radius:8px; transition:width .4s ease;}
+  .cat-row .camt{ width:64px; text-align:right; font-size:0.76rem; color:var(--ink-soft); flex-shrink:0;}
+
+  .month-nav{ display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:14px;}
+  .month-nav button{
+    background:var(--blush); border:none; width:30px; height:30px; border-radius:50%; cursor:pointer;
+    color:var(--berry-dark); font-weight:700; font-size:0.95rem;
+  }
+  .month-nav .m-label{ font-weight:700; color:var(--ink); min-width:140px; text-align:center;}
+
+  .chart-wrap{ position:relative; height:240px; }
+  .chart-wrap canvas{ max-width:100%; }
+
+  /* ---------- EDIT MODAL ---------- */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:var(--modal-overlay); z-index:100;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid var(--line);
+    width:100%; max-width:440px; padding:24px 26px; max-height:90vh; overflow-y:auto;
+  }
+  .modal-box h2{ margin:0 0 16px; color:var(--berry-dark); font-size:1.05rem;}
+  .modal-close{ float:right; background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--ink-soft); }
+
+  /* ---------- PROFILE PAGE ---------- */
+  #profileScreen{ display:none; }
+  .profile-grid{ display:grid; grid-template-columns:1fr; gap:18px; max-width:520px; margin:0 auto;}
+  .profile-avatar-row{ display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:6px;}
+  .profile-avatar{
+    width:84px; height:84px; border-radius:50%; background:linear-gradient(135deg,var(--berry),var(--peach));
+    color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:2rem;
+    overflow:hidden; border:3px solid var(--line);
+  }
+  .profile-avatar img{ width:100%; height:100%; object-fit:cover; }
+  .avatar-upload-btn{
+    border:2px solid var(--line); background:var(--cream); color:var(--ink-soft); font-weight:700; font-size:0.76rem;
+    padding:6px 14px; border-radius:6px; cursor:pointer; font-family:inherit;
+  }
+  .profile-section-title{ font-size:0.9rem; font-weight:700; color:var(--berry-dark); margin:18px 0 10px; border-bottom:1px solid var(--line); padding-bottom:6px;}
+
+  ::-webkit-scrollbar{ width:7px; }
+  ::-webkit-scrollbar-thumb{ background:var(--blush); border-radius:6px;}
+  .footer-note{ text-align:center; font-size:0.72rem; color:var(--ink-soft); margin-top:30px;}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="wrap">
+
+  <!-- ============ AUTH SCREEN ============ -->
+  <section id="authScreen">
+    <div class="auth-card">
+      <svg class="mascot" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="29" stroke="#A8843F" stroke-width="2" fill="#FFFDF8"/>
+        <circle cx="32" cy="32" r="24" stroke="#A8843F" stroke-width="1"/>
+        <text x="32" y="39" text-anchor="middle" font-family="Georgia, serif" font-size="18" letter-spacing="0.5" fill="#5C1F1F">EW</text>
+      </svg>
+      <div class="brand">ExpenseWise</div>
+      <div class="tagline">a refined ledger for your everyday finances</div>
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Log In</button>
+        <button class="tab-btn" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" class="pw-toggle" onclick="togglePw('loginPassword', this)">Show</button>
+          </div>
+        </div>
+        <div class="error-msg" id="loginError"></div>
+        <button type="submit" class="submit-btn">Log In</button>
+      </form>
+
+      <!-- SIGNUP FORM -->
+      <form id="signupForm" onsubmit="handleSignup(event)" style="display:none;">
+        <div class="field">
+          <label for="signupName">Your name</label>
+          <input type="text" id="signupName" placeholder="Riya" required autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="signupPassword">Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="signupPassword" placeholder="Create a password" required autocomplete="new-password" oninput="evaluatePassword()">
+            <button type="button" class="pw-toggle" onclick="togglePw('signupPassword', this)">Show</button>
+          </div>
+          <div class="strength-row">
+            <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+            <div class="strength-label" id="strengthLabel">—</div>
+          </div>
+          <ul class="pw-rules" id="pwRules">
+            <li id="ruleLen">8+ characters</li>
+            <li id="ruleUpper">1 capital letter</li>
+            <li id="ruleNum">1 number</li>
+            <li id="ruleSpec">1 special character</li>
+          </ul>
+        </div>
+        <div class="field">
+          <label for="signupConfirm">Confirm password</label>
+          <input type="password" id="signupConfirm" placeholder="••••••••" required autocomplete="new-password">
+        </div>
+        <div class="error-msg" id="signupError"></div>
+        <button type="submit" class="submit-btn">Create Account</button>
+      </form>
+
+      <div class="auth-foot" id="authFootLogin">New here? <a onclick="switchTab('signup')">Create an account</a></div>
+      <div class="auth-foot" id="authFootSignup" style="display:none;">Already have an account? <a onclick="switchTab('login')">Log in</a></div>
+    </div>
+  </section>
+
+  <!-- ============ APP SCREEN ============ -->
+  <section id="appScreen">
+    <header class="topbar">
+      <div class="who" onclick="showProfile()" title="View profile">
+        <div class="avatar" id="userAvatar">?</div>
+        <div>
+          <div class="who-name" id="userName">—</div>
+          <div class="who-sub" id="userEmail">—</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="nav-tabs">
+          <button class="nav-tab-btn active" id="navDashBtn" onclick="showDashboard()">Dashboard</button>
+          <button class="nav-tab-btn" id="navProfileBtn" onclick="showProfile()">Profile</button>
+        </div>
+        <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+        <button class="logout-btn" onclick="handleLogout()">Log Out</button>
+      </div>
+    </header>
+
+    <!-- ===== DASHBOARD VIEW ===== -->
+    <div id="dashboardView">
+      <div class="summary-grid">
+        <div class="sum-card income"><div class="label">Income</div><div class="value" id="sumIncome">₹0</div></div>
+        <div class="sum-card expense"><div class="label">Expenses</div><div class="value" id="sumExpense">₹0</div></div>
+        <div class="sum-card balance"><div class="label">Balance</div><div class="value" id="sumBalance">₹0</div></div>
+      </div>
+
+      <div class="panels">
+        <!-- ADD TRANSACTION -->
+        <div>
+          <div class="card">
+            <h2>🌸 <span id="formTitle">Add a transaction</span></h2>
+            <div class="editing-banner" id="editingBanner">Editing an existing transaction</div>
+            <div class="type-toggle">
+              <button type="button" class="active exp" id="typeExpBtn" onclick="setTxType('expense')">Expense</button>
+              <button type="button" class="inc" id="typeIncBtn" onclick="setTxType('income')">Income</button>
+            </div>
+            <form id="txForm" onsubmit="handleSaveTx(event)">
+              <div class="form-row">
+                <div class="field-sm">
+                  <label for="txAmount">Amount</label>
+                  <input type="number" id="txAmount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="field-sm">
+                  <label for="txDate">Date</label>
+                  <input type="date" id="txDate" required>
+                </div>
+              </div>
+              <div class="form-row" style="margin-top:10px;">
+                <div class="field-sm">
+                  <label for="txCategory">Category</label>
+                  <select id="txCategory"></select>
+                </div>
+                <div class="field-sm">
+                  <label for="txNote">Note (optional)</label>
+                  <input type="text" id="txNote" placeholder="e.g. coffee with friends" maxlength="60">
+                </div>
+              </div>
+              <div class="form-error" id="txError"></div>
+              <button type="submit" class="add-btn" id="txSubmitBtn">Add Transaction</button>
+              <button type="button" class="cancel-edit-btn" id="cancelEditBtn" style="display:none;" onclick="cancelEditTx()">Cancel edit</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2>🍰 Spending by category</h2>
+            <div class="cat-breakdown" id="catBreakdown"></div>
+          </div>
+        </div>
+
+        <!-- TRANSACTIONS LIST -->
+        <div class="card">
+          <h2>📒 Transactions</h2>
+
+          <div class="date-filter-row">
+            <select id="dateFilterMode" onchange="onDateFilterChange()">
+              <option value="month">By month</option>
+              <option value="today">Today</option>
+              <option value="week">This week</option>
+              <option value="custom">Custom range</option>
+            </select>
+            <div class="custom-range" id="customRangeRow">
+              <input type="date" id="customStart" onchange="renderAll()">
+              <span style="font-size:0.78rem; color:var(--ink-soft);">to</span>
+              <input type="date" id="customEnd" onchange="renderAll()">
+            </div>
+          </div>
+
+          <div class="month-nav" id="monthNav">
+            <button onclick="changeMonth(-1)">‹</button>
+            <div class="m-label" id="monthLabel">—</div>
+            <button onclick="changeMonth(1)">›</button>
+          </div>
+
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search by category, note, amount, or type…" oninput="renderTransactions()">
+          </div>
+
+          <div class="tx-filterbar">
+            <select id="filterCategory" onchange="renderTransactions()"><option value="all">All categories</option></select>
+            <select id="filterType" onchange="renderTransactions()">
+              <option value="all">All types</option>
+              <option value="income">Income only</option>
+              <option value="expense">Expense only</option>
+            </select>
+          </div>
+          <div class="tx-list" id="txList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PROFILE VIEW ===== -->
+    <div id="profileScreen">
+      <div class="card profile-grid">
+        <h2>👤 Your profile</h2>
+
+        <div class="profile-avatar-row">
+          <div class="profile-avatar" id="profileAvatar">?</div>
+          <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+          <button type="button" class="avatar-upload-btn" onclick="document.getElementById('avatarFileInput').click()">Change photo</button>
+        </div>
+
+        <form id="profileForm" onsubmit="handleProfileSave(event)">
+          <div class="profile-section-title">Personal details</div>
+          <div class="field">
+            <label for="profileName">Full name</label>
+            <input type="text" id="profileName" required>
+          </div>
+          <div class="field">
+            <label for="profileEmail">Email address</label>
+            <input type="email" id="profileEmail" required>
+          </div>
+
+          <div class="profile-section-title">Change password <span style="font-weight:400; color:var(--ink-soft);">(optional)</span></div>
+          <div class="field">
+            <label for="profileNewPassword">New password</label>
+            <div class="pw-wrap">
+              <input type="password" id="profileNewPassword" placeholder="Leave blank to keep current password" autocomplete="new-password" oninput="evaluateProfilePassword()">
+              <button type="button" class="pw-toggle" onclick="togglePw('profileNewPassword', this)">Show</button>
+            </div>
+            <div class="strength-row">
+              <div class="strength-bar"><div class="strength-fill" id="profileStrengthFill"></div></div>
+              <div class="strength-label" id="profileStrengthLabel">—</div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="profileConfirmPassword">Confirm new password</label>
+            <input type="password" id="profileConfirmPassword" placeholder="Repeat new password" autocomplete="new-password">
+          </div>
+
+          <div class="error-msg" id="profileError"></div>
+          <div class="success-msg" id="profileSuccess"></div>
+          <button type="submit" class="submit-btn">Save Changes</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="footer-note">Your records are kept privately — stored only in this browser.</div>
+  </section>
+
+</div>
+
+<!-- ============ EDIT TRANSACTION MODAL (mobile-friendly, also used on small screens) ============ -->
+<div class="modal-overlay" id="editModalOverlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeEditModal()">✕</button>
+    <h2>✏️ Edit transaction</h2>
+    <div class="type-toggle">
+      <button type="button" class="active exp" id="modalTypeExpBtn" onclick="setModalTxType('expense')">Expense</button>
+      <button type="button" class="inc" id="modalTypeIncBtn" onclick="setModalTxType('income')">Income</button>
+    </div>
+    <form id="modalTxForm" onsubmit="handleModalSaveTx(event)">
+      <div class="form-row">
+        <div class="field-sm">
+          <label for="modalTxAmount">Amount</label>
+          <input type="number" id="modalTxAmount" step="0.01" min="0.01" required>
+        </div>
+        <div class="field-sm">
+          <label for="modalTxDate">Date</label>
+          <input type="date" id="modalTxDate" required>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:10px;">
+        <div class="field-sm">
+          <label for="modalTxCategory">Category</label>
+          <select id="modalTxCategory"></select>
+        </div>
+        <div class="field-sm">
+          <label for="modalTxNote">Note</label>
+          <input type="text" id="modalTxNote" maxlength="60">
+        </div>
+      </div>
+      <div class="form-error" id="modalTxError"></div>
+      <button type="submit" class="add-btn">Save changes</button>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONSTANTS & STATE
+   ============================================================ */
+const USERS_KEY = 'expensewise_users';            // {email: {name, email, hash, avatar}}
+const SESSION_KEY = 'expensewise_session';         // sessionStorage: current user {name,email}
+const DATA_PREFIX = 'expensewise_data_';           // localStorage per-user: expensewise_data_<email>
+const THEME_KEY = 'expensewise_theme';             // localStorage: 'light' | 'dark'
+
+const CATEGORIES = [
+  { id:'food', label:'Food & Dining', icon:'🍔', color:'#e75a8e' },
+  { id:'transport', label:'Transport', icon:'🚌', color:'#7a8fd6' },
+  { id:'shopping', label:'Shopping', icon:'🛍️', color:'#e8a23d' },
+  { id:'bills', label:'Bills & Utilities', icon:'💡', color:'#3fb27f' },
+  { id:'health', label:'Health', icon:'💊', color:'#c2417a' },
+  { id:'entertainment', label:'Fun', icon:'🎬', color:'#9b6fd6' },
+  { id:'salary', label:'Salary', icon:'💰', color:'#2f9e64' },
+  { id:'other', label:'Other', icon:'✨', color:'#a98fa0' },
+];
+
+let currentUser = null;        // {name, email}
+let currentTxType = 'expense';
+let modalTxType = 'expense';
+let viewMonth = new Date().getMonth();
+let viewYear = new Date().getFullYear();
+let editingTxId = null;        // id of transaction currently being edited inline
+let modalEditingTxId = null;   // id being edited in the modal (used on narrow screens)
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function showToast(msg, kind){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=> { t.classList.remove('show'); }, 2400);
+}
+
+function loadUsers(){
+  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function saveUsers(users){ localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
+
+// simple non-cryptographic hash, fine for a client-only demo app
+function simpleHash(str){
+  let hash = 0;
+  for(let i=0;i<str.length;i++){
+    hash = ((hash<<5)-hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return 'h' + Math.abs(hash).toString(36) + str.length;
+}
+
+function userDataKey(email){ return DATA_PREFIX + email.toLowerCase(); }
+
+function loadUserData(email){
+  try {
+    const raw = localStorage.getItem(userDataKey(email));
+    return raw ? JSON.parse(raw) : { transactions: [] };
+  } catch(e){ return { transactions: [] }; }
+}
+function saveUserData(email, data){
+  localStorage.setItem(userDataKey(email), JSON.stringify(data));
+}
+
+function formatMoney(n){
+  const sign = n < 0 ? '-' : '';
+  return sign + '₹' + Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function isValidEmail(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/* ============================================================
+   THEME (DARK MODE)
+   ============================================================ */
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeToggleBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem(THEME_KEY, theme);
+}
+function toggleTheme(){
+  const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+function initTheme(){
+  const saved = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+}
+
+/* ============================================================
+   AUTH SCREEN — TAB SWITCH
+   ============================================================ */
+function switchTab(which){
+  const isLogin = which === 'login';
+  document.getElementById('tabLogin').classList.toggle('active', isLogin);
+  document.getElementById('tabSignup').classList.toggle('active', !isLogin);
+  document.getElementById('loginForm').style.display = isLogin ? 'block' : 'none';
+  document.getElementById('signupForm').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('authFootLogin').style.display = isLogin ? 'block' : 'none';
+  document.getElementById('authFootSignup').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('signupError').textContent = '';
+}
+
+function togglePw(id, btn){
+  const inp = document.getElementById(id);
+  const isPw = inp.type === 'password';
+  inp.type = isPw ? 'text' : 'password';
+  btn.textContent = isPw ? 'Hide' : 'Show';
+}
+
+/* ============================================================
+   PASSWORD STRENGTH (shared logic for signup + profile)
+   ============================================================ */
+function computeStrength(pw){
+  const hasLen = pw.length >= 8;
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasNum = /[0-9]/.test(pw);
+  const hasSpec = /[^A-Za-z0-9]/.test(pw);
+  const passedCount = [hasLen, hasUpper, hasNum, hasSpec].filter(Boolean).length;
+
+  let pct = 0, text = '—', color = 'var(--line)';
+  if(pw.length === 0){ pct = 0; text = '—'; color = 'var(--line)'; }
+  else if(hasLen && hasUpper && hasNum && hasSpec){ pct = 100; text = 'Strong'; color = 'var(--good)'; }
+  else if(passedCount >= 2){ pct = 60; text = 'Normal'; color = 'var(--warn)'; }
+  else { pct = 28; text = 'Weak'; color = 'var(--bad)'; }
+
+  return { hasLen, hasUpper, hasNum, hasSpec, strong: hasLen && hasUpper && hasNum && hasSpec, pct, text, color };
+}
+
+function evaluatePassword(){
+  const pw = document.getElementById('signupPassword').value;
+  const s = computeStrength(pw);
+  setRule('ruleLen', s.hasLen);
+  setRule('ruleUpper', s.hasUpper);
+  setRule('ruleNum', s.hasNum);
+  setRule('ruleSpec', s.hasSpec);
+  const fill = document.getElementById('strengthFill');
+  const label = document.getElementById('strengthLabel');
+  fill.style.width = s.pct + '%';
+  fill.style.background = s.color;
+  label.textContent = s.text;
+  label.style.color = s.color;
+  return s;
+}
+
+function evaluateProfilePassword(){
+  const pw = document.getElementById('profileNewPassword').value;
+  const s = computeStrength(pw);
+  const fill = document.getElementById('profileStrengthFill');
+  const label = document.getElementById('profileStrengthLabel');
+  fill.style.width = s.pct + '%';
+  fill.style.background = s.color;
+  label.textContent = s.text;
+  label.style.color = s.color;
+  return s;
+}
+
+function setRule(id, ok){
+  const el = document.getElementById(id);
+  el.classList.toggle('ok', ok);
+}
+
+/* ============================================================
+   SIGNUP
+   ============================================================ */
+function handleSignup(e){
+  e.preventDefault();
+  const errorEl = document.getElementById('signupError');
+  errorEl.textContent = '';
+
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+  const pw = document.getElementById('signupPassword').value;
+  const confirm = document.getElementById('signupConfirm').value;
+
+  const strength = evaluatePassword();
+
+  if(!strength.strong){
+    errorEl.textContent = 'Please choose a strong password (8+ chars, a capital letter, a number, and a special character).';
+    return;
+  }
+  if(pw !== confirm){
+    errorEl.textContent = "Passwords don't match.";
+    return;
+  }
+  if(!isValidEmail(email)){
+    errorEl.textContent = 'Please enter a valid email address.';
+    return;
+  }
+
+  const users = loadUsers();
+  if(users[email]){
+    errorEl.textContent = 'An account with this email already exists. Please log in instead.';
+    return;
+  }
+
+  users[email] = { name, email, hash: simpleHash(pw), avatar: null };
+  saveUsers(users);
+  saveUserData(email, { transactions: [] }); // fresh, empty data store for this new user
+
+  showToast('Strong password — account created! 🎉', 'success');
+
+  document.getElementById('signupForm').reset();
+  evaluatePassword();
+
+  switchTab('login');
+  document.getElementById('loginEmail').value = email;
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+function handleLogin(e){
+  e.preventDefault();
+  const errorEl = document.getElementById('loginError');
+  errorEl.textContent = '';
+
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pw = document.getElementById('loginPassword').value;
+
+  const users = loadUsers();
+  const user = users[email];
+
+  if(!user || user.hash !== simpleHash(pw)){
+    errorEl.textContent = 'Incorrect email or password.';
+    return;
+  }
+
+  startSession(user);
+  document.getElementById('loginForm').reset();
+}
+
+function startSession(user){
+  currentUser = { name: user.name, email: user.email };
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+  enterApp();
+}
+
+/* ============================================================
+   LOGOUT — full UI + session clear
+   ============================================================ */
+function handleLogout(){
+  currentUser = null;
+  currentTxType = 'expense';
+  editingTxId = null;
+  modalEditingTxId = null;
+  viewMonth = new Date().getMonth();
+  viewYear = new Date().getFullYear();
+
+  sessionStorage.removeItem(SESSION_KEY);
+
+  document.getElementById('userAvatar').innerHTML = '?';
+  document.getElementById('userName').textContent = '—';
+  document.getElementById('userEmail').textContent = '—';
+  document.getElementById('sumIncome').textContent = '₹0';
+  document.getElementById('sumExpense').textContent = '₹0';
+  document.getElementById('sumBalance').textContent = '₹0';
+  document.getElementById('catBreakdown').innerHTML = '';
+  document.getElementById('txList').innerHTML = '';
+  document.getElementById('txForm').reset();
+  document.getElementById('filterCategory').innerHTML = '<option value="all">All categories</option>';
+  document.getElementById('filterType').value = 'all';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('dateFilterMode').value = 'month';
+  document.getElementById('customRangeRow').classList.remove('show');
+  document.getElementById('customStart').value = '';
+  document.getElementById('customEnd').value = '';
+  document.getElementById('monthLabel').textContent = '—';
+  document.getElementById('profileName').value = '';
+  document.getElementById('profileEmail').value = '';
+  document.getElementById('profileAvatar').innerHTML = '?';
+  document.getElementById('profileForm').reset();
+  cancelEditTx();
+  closeEditModal();
+
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  switchTab('login');
+
+  showToast('Logged out. See you soon! 👋');
+}
+
+/* ============================================================
+   ENTER APP (after login or session restore)
+   ============================================================ */
+function enterApp(){
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+
+  refreshIdentityUI();
+
+  populateCategorySelects();
+  document.getElementById('txDate').value = new Date().toISOString().slice(0,10);
+  setTxType('expense');
+
+  viewMonth = new Date().getMonth();
+  viewYear = new Date().getFullYear();
+  document.getElementById('dateFilterMode').value = 'month';
+  document.getElementById('customRangeRow').classList.remove('show');
+  document.getElementById('monthNav').style.display = 'flex';
+
+  showDashboard();
+  renderAll();
+  showToast('Welcome back, ' + currentUser.name + '! 🐽');
+}
+
+function refreshIdentityUI(){
+  const users = loadUsers();
+  const u = users[currentUser.email] || {};
+  const initial = currentUser.name.charAt(0).toUpperCase();
+  const avatarHtml = u.avatar ? `<img src="${u.avatar}" alt="avatar">` : initial;
+  document.getElementById('userAvatar').innerHTML = avatarHtml;
+  document.getElementById('userName').textContent = currentUser.name;
+  document.getElementById('userEmail').textContent = currentUser.email;
+  document.getElementById('profileAvatar').innerHTML = avatarHtml;
+  document.getElementById('profileName').value = currentUser.name;
+  document.getElementById('profileEmail').value = currentUser.email;
+}
+
+function populateCategorySelects(){
+  const opts = CATEGORIES.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+  document.getElementById('txCategory').innerHTML = opts;
+  document.getElementById('modalTxCategory').innerHTML = opts;
+  document.getElementById('filterCategory').innerHTML = '<option value="all">All categories</option>' + opts;
+}
+
+/* ============================================================
+   NAVIGATION: DASHBOARD <-> PROFILE
+   ============================================================ */
+function showDashboard(){
+  document.getElementById('dashboardView').style.display = 'block';
+  document.getElementById('profileScreen').style.display = 'none';
+  document.getElementById('navDashBtn').classList.add('active');
+  document.getElementById('navProfileBtn').classList.remove('active');
+}
+function showProfile(){
+  if(!currentUser) return;
+  refreshIdentityUI();
+  document.getElementById('profileError').textContent = '';
+  document.getElementById('profileSuccess').textContent = '';
+  document.getElementById('profileNewPassword').value = '';
+  document.getElementById('profileConfirmPassword').value = '';
+  evaluateProfilePassword();
+  document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('profileScreen').style.display = 'block';
+  document.getElementById('navDashBtn').classList.remove('active');
+  document.getElementById('navProfileBtn').classList.add('active');
+}
+
+/* ============================================================
+   PROFILE: AVATAR UPLOAD
+   ============================================================ */
+function handleAvatarUpload(e){
+  const file = e.target.files[0];
+  if(!file || !currentUser) return;
+  if(!file.type.startsWith('image/')){
+    showToast('Please choose an image file.', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const users = loadUsers();
+    users[currentUser.email].avatar = ev.target.result;
+    saveUsers(users);
+    refreshIdentityUI();
+    showToast('Profile photo updated ✨', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   PROFILE: SAVE CHANGES (name, email, password)
+   ============================================================ */
+function handleProfileSave(e){
+  e.preventDefault();
+  const errorEl = document.getElementById('profileError');
+  const successEl = document.getElementById('profileSuccess');
+  errorEl.textContent = '';
+  successEl.textContent = '';
+
+  const newName = document.getElementById('profileName').value.trim();
+  const newEmail = document.getElementById('profileEmail').value.trim().toLowerCase();
+  const newPw = document.getElementById('profileNewPassword').value;
+  const confirmPw = document.getElementById('profileConfirmPassword').value;
+
+  if(!newName){ errorEl.textContent = 'Name cannot be empty.'; return; }
+  if(!isValidEmail(newEmail)){ errorEl.textContent = 'Please enter a valid email address.'; return; }
+
+  if(newPw || confirmPw){
+    const strength = computeStrength(newPw);
+    if(!strength.strong){
+      errorEl.textContent = 'New password must be 8+ characters with a capital letter, a number, and a special character.';
+      return;
+    }
+    if(newPw !== confirmPw){
+      errorEl.textContent = "New passwords don't match.";
+      return;
+    }
+  }
+
+  const users = loadUsers();
+  const oldEmail = currentUser.email;
+  const record = users[oldEmail];
+
+  if(newEmail !== oldEmail && users[newEmail]){
+    errorEl.textContent = 'That email is already used by another account.';
+    return;
+  }
+
+  record.name = newName;
+  if(newPw) record.hash = simpleHash(newPw);
+
+  if(newEmail !== oldEmail){
+    // move user record + their transaction data to the new email key
+    delete users[oldEmail];
+    record.email = newEmail;
+    users[newEmail] = record;
+
+    const data = loadUserData(oldEmail);
+    saveUserData(newEmail, data);
+    localStorage.removeItem(userDataKey(oldEmail));
+
+    currentUser.email = newEmail;
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+  } else {
+    users[oldEmail] = record;
+  }
+
+  saveUsers(users);
+  currentUser.name = newName;
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+
+  document.getElementById('profileNewPassword').value = '';
+  document.getElementById('profileConfirmPassword').value = '';
+  evaluateProfilePassword();
+
+  refreshIdentityUI();
+  successEl.textContent = 'Profile updated successfully.';
+  showToast('Profile saved ✨', 'success');
+}
+
+/* ============================================================
+   TRANSACTION TYPE TOGGLE (inline form)
+   ============================================================ */
+function setTxType(type){
+  currentTxType = type;
+  document.getElementById('typeExpBtn').classList.toggle('active', type === 'expense');
+  document.getElementById('typeIncBtn').classList.toggle('active', type === 'income');
+  const sel = document.getElementById('txCategory');
+  if(!editingTxId){
+    sel.value = type === 'income' ? 'salary' : 'food';
+  }
+}
+function setModalTxType(type){
+  modalTxType = type;
+  document.getElementById('modalTypeExpBtn').classList.toggle('active', type === 'expense');
+  document.getElementById('modalTypeIncBtn').classList.toggle('active', type === 'income');
+}
+
+/* ============================================================
+   ADD / UPDATE TRANSACTION (inline form)
+   ============================================================ */
+function handleSaveTx(e){
+  e.preventDefault();
+  const errorEl = document.getElementById('txError');
+  errorEl.textContent = '';
+
+  if(!currentUser){ errorEl.textContent = 'Please log in first.'; return; }
+
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const date = document.getElementById('txDate').value;
+  const category = document.getElementById('txCategory').value;
+  const note = document.getElementById('txNote').value.trim();
+
+  if(isNaN(amount) || amount <= 0){
+    errorEl.textContent = 'Please enter a valid amount greater than 0.';
+    return;
+  }
+  if(!date){
+    errorEl.textContent = 'Please choose a date.';
+    return;
+  }
+
+  const data = loadUserData(currentUser.email);
+
+  if(editingTxId){
+    const idx = data.transactions.findIndex(t => t.id === editingTxId);
+    if(idx === -1){
+      errorEl.textContent = 'That transaction no longer exists.';
+      cancelEditTx();
+      return;
+    }
+    data.transactions[idx] = { ...data.transactions[idx], type: currentTxType, amount, category, note, date };
+    saveUserData(currentUser.email, data);
+    showToast('Transaction updated ✨', 'success');
+    cancelEditTx();
+  } else {
+    data.transactions.push({
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      type: currentTxType, amount, category, note, date
+    });
+    saveUserData(currentUser.email, data);
+    document.getElementById('txForm').reset();
+    document.getElementById('txDate').value = new Date().toISOString().slice(0,10);
+    setTxType(currentTxType);
+    showToast((currentTxType === 'income' ? 'Income' : 'Expense') + ' added ✨', 'success');
+  }
+
+  // jump the month view to the month of the saved transaction
+  const d = new Date(date);
+  viewMonth = d.getMonth();
+  viewYear = d.getFullYear();
+  if(document.getElementById('dateFilterMode').value === 'month'){
+    // stay on month mode, just re-render
+  }
+
+  renderAll();
+}
+
+/* ============================================================
+   EDIT TRANSACTION — inline form pre-fill
+   ============================================================ */
+function startEditTx(id){
+  if(!currentUser) return;
+  // On wider layouts we pre-fill the existing form; on narrow screens we use the modal for convenience.
+  if(window.innerWidth < 760){
+    openEditModal(id);
+    return;
+  }
+  const data = loadUserData(currentUser.email);
+  const tx = data.transactions.find(t => t.id === id);
+  if(!tx) return;
+
+  editingTxId = id;
+  setTxType(tx.type);
+  document.getElementById('txAmount').value = tx.amount;
+  document.getElementById('txDate').value = tx.date;
+  document.getElementById('txCategory').value = tx.category;
+  document.getElementById('txNote').value = tx.note || '';
+
+  document.getElementById('formTitle').textContent = 'Edit transaction';
+  document.getElementById('editingBanner').classList.add('show');
+  document.getElementById('txSubmitBtn').textContent = 'Update Transaction';
+  document.getElementById('cancelEditBtn').style.display = 'block';
+  document.getElementById('txError').textContent = '';
+
+  document.querySelector('#dashboardView .card').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function cancelEditTx(){
+  editingTxId = null;
+  document.getElementById('formTitle').textContent = 'Add a transaction';
+  document.getElementById('editingBanner').classList.remove('show');
+  document.getElementById('txSubmitBtn').textContent = 'Add Transaction';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('txForm').reset();
+  document.getElementById('txDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('txError').textContent = '';
+  setTxType('expense');
+}
+
+/* ============================================================
+   EDIT TRANSACTION — modal (used on small screens)
+   ============================================================ */
+function openEditModal(id){
+  const data = loadUserData(currentUser.email);
+  const tx = data.transactions.find(t => t.id === id);
+  if(!tx) return;
+  modalEditingTxId = id;
+  setModalTxType(tx.type);
+  document.getElementById('modalTxAmount').value = tx.amount;
+  document.getElementById('modalTxDate').value = tx.date;
+  document.getElementById('modalTxCategory').value = tx.category;
+  document.getElementById('modalTxNote').value = tx.note || '';
+  document.getElementById('modalTxError').textContent = '';
+  document.getElementById('editModalOverlay').classList.add('show');
+}
+function closeEditModal(){
+  modalEditingTxId = null;
+  document.getElementById('editModalOverlay').classList.remove('show');
+  document.getElementById('modalTxForm').reset();
+}
+function handleModalSaveTx(e){
+  e.preventDefault();
+  const errorEl = document.getElementById('modalTxError');
+  errorEl.textContent = '';
+  if(!currentUser || !modalEditingTxId) return;
+
+  const amount = parseFloat(document.getElementById('modalTxAmount').value);
+  const date = document.getElementById('modalTxDate').value;
+  const category = document.getElementById('modalTxCategory').value;
+  const note = document.getElementById('modalTxNote').value.trim();
+
+  if(isNaN(amount) || amount <= 0){ errorEl.textContent = 'Please enter a valid amount greater than 0.'; return; }
+  if(!date){ errorEl.textContent = 'Please choose a date.'; return; }
+
+  const data = loadUserData(currentUser.email);
+  const idx = data.transactions.findIndex(t => t.id === modalEditingTxId);
+  if(idx === -1){ errorEl.textContent = 'That transaction no longer exists.'; return; }
+
+  data.transactions[idx] = { ...data.transactions[idx], type: modalTxType, amount, category, note, date };
+  saveUserData(currentUser.email, data);
+
+  const d = new Date(date);
+  viewMonth = d.getMonth();
+  viewYear = d.getFullYear();
+
+  closeEditModal();
+  renderAll();
+  showToast('Transaction updated ✨', 'success');
+}
+
+/* ============================================================
+   DELETE TRANSACTION
+   ============================================================ */
+function deleteTx(id){
+  if(!currentUser) return;
+  const data = loadUserData(currentUser.email);
+  data.transactions = data.transactions.filter(t => t.id !== id);
+  saveUserData(currentUser.email, data);
+  if(editingTxId === id) cancelEditTx();
+  renderAll();
+  showToast('Transaction deleted', 'success');
+}
+
+/* ============================================================
+   DATE FILTERING
+   ============================================================ */
+function onDateFilterChange(){
+  const mode = document.getElementById('dateFilterMode').value;
+  document.getElementById('monthNav').style.display = mode === 'month' ? 'flex' : 'none';
+  document.getElementById('customRangeRow').classList.toggle('show', mode === 'custom');
+  if(mode === 'custom'){
+    const today = new Date().toISOString().slice(0,10);
+    if(!document.getElementById('customStart').value) document.getElementById('customStart').value = today;
+    if(!document.getElementById('customEnd').value) document.getElementById('customEnd').value = today;
+  }
+  renderAll();
+}
+
+function startOfWeek(d){
+  const date = new Date(d);
+  const day = date.getDay(); // 0 = Sunday
+  date.setHours(0,0,0,0);
+  date.setDate(date.getDate() - day);
+  return date;
+}
+
+function getFilteredTransactions(){
+  if(!currentUser) return [];
+  const data = loadUserData(currentUser.email);
+  const mode = document.getElementById('dateFilterMode').value;
+  const all = data.transactions;
+
+  if(mode === 'today'){
+    const todayStr = new Date().toISOString().slice(0,10);
+    return all.filter(t => t.date === todayStr);
+  }
+  if(mode === 'week'){
+    const weekStart = startOfWeek(new Date());
+    const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+    return all.filter(t => {
+      const d = new Date(t.date);
+      return d >= weekStart && d <= weekEnd;
+    });
+  }
+  if(mode === 'custom'){
+    const start = document.getElementById('customStart').value;
+    const end = document.getElementById('customEnd').value;
+    if(!start || !end) return [];
+    return all.filter(t => t.date >= start && t.date <= end);
+  }
+  // default: by month
+  return all.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === viewMonth && d.getFullYear() === viewYear;
+  });
+}
+
+function changeMonth(delta){
+  viewMonth += delta;
+  if(viewMonth < 0){ viewMonth = 11; viewYear--; }
+  if(viewMonth > 11){ viewMonth = 0; viewYear++; }
+  renderAll();
+}
+
+/* ============================================================
+   RENDER: SUMMARY
+   ============================================================ */
+function renderSummary(){
+  const txs = getFilteredTransactions();
+  const income = txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expense = txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  document.getElementById('sumIncome').textContent = formatMoney(income);
+  document.getElementById('sumExpense').textContent = formatMoney(expense);
+  document.getElementById('sumBalance').textContent = formatMoney(income - expense);
+
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('monthLabel').textContent = monthNames[viewMonth] + ' ' + viewYear;
+}
+
+/* ============================================================
+   RENDER: CATEGORY BREAKDOWN (expenses only, current filter)
+   ============================================================ */
+function renderCategoryBreakdown(){
+  const container = document.getElementById('catBreakdown');
+  const txs = getFilteredTransactions().filter(t => t.type === 'expense');
+
+  if(txs.length === 0){
+    container.innerHTML = `<div class="empty-state"><span class="em-icon">🌱</span>No expenses in this period.</div>`;
+    return;
+  }
+
+  const totals = {};
+  txs.forEach(t => { totals[t.category] = (totals[t.category]||0) + t.amount; });
+  const maxVal = Math.max(...Object.values(totals));
+
+  const rows = CATEGORIES.filter(c => totals[c.id]).sort((a,b) => totals[b.id]-totals[a.id]);
+
+  container.innerHTML = rows.map(c => `
+    <div class="cat-row">
+      <div class="cname">${c.icon} ${c.label}</div>
+      <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${(totals[c.id]/maxVal*100).toFixed(0)}%; background:${c.color};"></div></div>
+      <div class="camt">${formatMoney(totals[c.id])}</div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   RENDER: TRANSACTION LIST (filters + search)
+   ============================================================ */
+function renderTransactions(){
+  const list = document.getElementById('txList');
+  const filterCat = document.getElementById('filterCategory').value;
+  const filterType = document.getElementById('filterType').value;
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+  let txs = getFilteredTransactions();
+  if(filterCat !== 'all') txs = txs.filter(t => t.category === filterCat);
+  if(filterType !== 'all') txs = txs.filter(t => t.type === filterType);
+
+  if(query){
+    txs = txs.filter(t => {
+      const cat = CATEGORIES.find(c => c.id === t.category);
+      const catLabel = cat ? cat.label.toLowerCase() : '';
+      return (
+        catLabel.includes(query) ||
+        (t.note || '').toLowerCase().includes(query) ||
+        String(t.amount).includes(query) ||
+        t.type.toLowerCase().includes(query)
+      );
+    });
+  }
+
+  txs.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  if(txs.length === 0){
+    list.innerHTML = `<div class="empty-state"><span class="em-icon">🐷</span>No transactions match here yet.<br>Try adjusting your search or filters.</div>`;
+    return;
+  }
+
+  list.innerHTML = txs.map(t => {
+    const cat = CATEGORIES.find(c => c.id === t.category) || CATEGORIES[CATEGORIES.length-1];
+    const dateStr = new Date(t.date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+    return `
+      <div class="tx-item">
+        <div class="tx-cat-pill" style="background:${cat.color};">${cat.icon}</div>
+        <div class="tx-info">
+          <div class="tx-cat">${cat.label}</div>
+          <div class="tx-note">${t.note ? t.note : (t.type === 'income' ? 'Income' : 'Expense')}</div>
+        </div>
+        <div class="tx-meta">
+          <div class="tx-amt ${t.type === 'income' ? 'inc' : 'exp'}">${t.type === 'income' ? '+' : '-'}${formatMoney(t.amount)}</div>
+          <div class="tx-date">${dateStr}</div>
+        </div>
+        <div class="tx-actions">
+          <button class="tx-edit" title="Edit" onclick="startEditTx('${t.id}')">✎</button>
+          <button class="tx-del" title="Delete" onclick="deleteTx('${t.id}')">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderAll(){
+  renderSummary();
+  renderCategoryBreakdown();
+  renderTransactions();
+}
+
+/* ============================================================
+   SESSION RESTORE ON LOAD
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  evaluatePassword();
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(raw){
+      const sessUser = JSON.parse(raw);
+      const users = loadUsers();
+      if(users[sessUser.email]){
+        currentUser = { name: users[sessUser.email].name, email: sessUser.email };
+        enterApp();
+        return;
+      }
+    }
+  }catch(e){ /* ignore, show auth screen */ }
+  document.getElementById('authScreen').style.display = 'flex';
+});
+</script>
+</body>
+</html>
