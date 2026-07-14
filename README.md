@@ -133,3 +133,4 @@ No external database is required.
 - Cloud Database Integration
 - Multi-device Sync
 ## Screen shots
+![image alt](https://github.com/prasanna140/Expense_tracker_main_project/blob/22dff8818a4ae866958b4aa1bef611b1c06d31d4/Expense_tracker_showcases.png)
