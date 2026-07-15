@@ -18,55 +18,102 @@ This repository contains the **modular** version of the original single-file `Ex
 - Fully responsive layout
 
 ## Project Structure
-ExpenseWise/
+Expense-Tracker/
 │
-├── index.html              # Main HTML entry point
+├── index.html
 ├── README.md
+├── .gitignore
 ├── LICENSE
 │
 ├── assets/
-│   ├── images/              # Static images (none required by default build)
-│   └── fonts/                # Custom fonts (the app uses system/Georgia serif fonts by default)
+│   ├── images/
+│   │   ├── logo.png
+│   │   ├── dashboard.png
+│   │   ├── profile.png
+│   │   ├── empty-state.svg
+│   │   └── icons/
+│   │       ├── income.svg
+│   │       ├── expense.svg
+│   │       ├── wallet.svg
+│   │       ├── chart.svg
+│   │       └── user.svg
+│   │
+│   └── favicon/
+│       └── favicon.ico
 │
 ├── css/
-│   ├── variables.css        # CSS custom properties (light & dark theme tokens)
-│   ├── global.css           # Resets, body background, layout wrapper, toast, scrollbar, footer
-│   ├── auth.css              # Auth screen: card, tabs, brand, mascot, auth footer
-│   ├── navbar.css            # Top bar: avatar, nav tabs, theme toggle, logout button
-│   ├── dashboard.css         # Summary cards, panels, generic card, month nav, category breakdown
-│   ├── transaction.css       # Filter bar, search bar, transaction list & items
-│   ├── profile.css           # Profile page avatar & section styling
-│   ├── modal.css             # Edit-transaction modal overlay & box
-│   ├── forms.css             # Shared form fields, password strength UI, buttons, type toggle
-│   ├── responsive.css        # Media query breakpoints
-│   └── dark-theme.css        # Dark-mode specific selector overrides
+│   ├── style.css
+│   ├── variables.css
+│   ├── navbar.css
+│   ├── dashboard.css
+│   ├── transactions.css
+│   ├── analytics.css
+│   ├── forms.css
+│   ├── modal.css
+│   ├── profile.css
+│   ├── darkmode.css
+│   └── responsive.css
 │
 ├── js/
-│   ├── app.js                # Global app state + DOMContentLoaded bootstrap / session restore
-│   ├── auth.js                # Tab switching, password visibility, signup & login handlers
-│   ├── session.js             # Session start, logout, enter-app, identity refresh
-│   ├── storage.js             # localStorage helpers (users + per-user transaction data)
-│   ├── theme.js                # Light/dark theme apply, toggle, and init
-│   ├── profile.js              # Avatar upload & profile save handlers
-│   ├── dashboard.js            # Dashboard ↔ Profile view navigation
-│   ├── transaction.js          # Add/edit/delete transactions (inline form) + list rendering
-│   ├── filters.js              # Date filter mode logic, month navigation, filtering helper
-│   ├── category.js             # Category select population + category breakdown rendering
-│   ├── summary.js              # Summary cards rendering + renderAll() orchestrator
-│   ├── modal.js                 # Edit-transaction modal open/close/save (small screens)
-│   ├── validation.js            # Password strength calculation + strength UI feedback
-│   ├── utils.js                  # Generic utilities (toast, money formatting, email check, dates)
-│   └── constants.js              # Storage keys and category definitions
+│   ├── app.js
+│   ├── router.js
+│   ├── storage.js
+│   ├── data.js
+│   ├── utils.js
+│   ├── charts.js
+│   ├── validation.js
+│   ├── theme.js
+│   │
+│   ├── auth/
+│   │   ├── login.js
+│   │   ├── register.js
+│   │   └── authGuard.js
+│   │
+│   ├── components/
+│   │   ├── navbar.js
+│   │   ├── sidebar.js
+│   │   ├── footer.js
+│   │   ├── modal.js
+│   │   ├── toast.js
+│   │   ├── transactionCard.js
+│   │   └── summaryCard.js
+│   │
+│   ├── pages/
+│   │   ├── dashboard.js
+│   │   ├── transactions.js
+│   │   ├── analytics.js
+│   │   ├── profile.js
+│   │   └── settings.js
+│   │
+│   └── services/
+│       ├── transactionService.js
+│       ├── categoryService.js
+│       └── userService.js
+│
+├── pages/
+│   ├── login.html
+│   ├── register.html
+│   ├── dashboard.html
+│   ├── transactions.html
+│   ├── analytics.html
+│   ├── profile.html
+│   └── settings.html
 │
 ├── data/
-│   └── sample-data.json      # Example transaction data shape (for reference only — the app itself reads/writes localStorage, not this file)
+│   ├── categories.json
+│   └── sampleData.json
 │
-├── docs/
-│   ├── screenshots/          # Place UI screenshots here
-│   ├── project-report.pdf    # Optional project write-up
-│   └── architecture.png      # Optional architecture diagram
-│
-└── .gitignore
+└── docs/
+    ├── screenshots/
+    │   ├── login.png
+    │   ├── dashboard.png
+    │   ├── transactions.png
+    │   ├── analytics.png
+    │   ├── profile.png
+    │   └── darkmode.png
+    │
+    ├── project-report.pdf
+    └── architecture.png
 
 ## How to Run
 1. Download or Clone the repository.
